@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ΑναΓέννηση Finance Voice</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #fbf4ef, #f7f0e6);
+      color: #1f1a17;
+    }
+    .app { max-width: 1080px; margin: 0 auto; padding: 24px 16px 60px; }
+    .brand { letter-spacing: .22em; color: #8a7d70; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; }
+    h1 { margin: 0; font-size: clamp(34px, 7vw, 58px); letter-spacing: -.05em; line-height: .95; }
+    .subtitle { color: #62584f; font-size: 18px; line-height: 1.55; margin: 16px 0 24px; }
+    .voice-panel, .card, .form, .list-panel {
+      background: rgba(255,255,255,.92);
+      border: 1px solid #eadfd4;
+      border-radius: 26px;
+      box-shadow: 0 12px 28px rgba(31,26,23,.06);
+    }
+    .voice-panel { padding: 18px; margin: 18px 0; }
+    .voice-row { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+    .mic-circle {
+      width: 74px; height: 74px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 34px;
+      background: #1f1a17; color: white; position: relative;
+    }
+    .mic-circle.listening::before, .mic-circle.listening::after {
+      content: ""; position: absolute; inset: -8px; border-radius: 50%;
+      border: 2px solid #9f1d1d; animation: pulse 1.25s infinite;
+    }
+    .mic-circle.listening::after { inset: -16px; opacity: .55; animation-delay: .3s; }
+    @keyframes pulse { 0% { transform: scale(.86); opacity: .9; } 100% { transform: scale(1.15); opacity: 0; } }
+    .status { font-size: 18px; font-weight: 800; margin: 0; }
+    .hint { color: #776b61; line-height: 1.45; margin: 6px 0 0; }
+    button {
+      width: 100%; border: 0; border-radius: 18px; padding: 15px 18px;
+      background: #1f1a17; color: white; font-size: 16px; font-weight: 800; cursor: pointer;
+    }
+    button.secondary { background: white; color: #1f1a17; border: 1px solid #ded5ca; }
+    button.danger { background: #9f1d1d; }
+    .voice-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .transcript {
+      margin-top: 14px; padding: 13px; border-radius: 18px; background: #fbf7f1;
+      border: 1px solid #efe4d9; color: #564b42; min-height: 48px;
+    }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+    .card { padding: 18px; }
+    .card span { color: #7b7066; font-size: 14px; }
+    .card strong { display: block; font-size: 34px; margin-top: 10px; }
+    .form, .list-panel { padding: 16px; margin-top: 14px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    input, select {
+      width: 100%; padding: 15px; border: 1px solid #d9d0c5; border-radius: 18px;
+      font-size: 16px; background: white; color: #1f1a17;
+    }
+    .full { grid-column: 1 / -1; }
+    .records { display: grid; gap: 9px; margin-top: 12px; }
+    .record {
+      display: grid; gap: 7px; padding: 14px; border-radius: 18px;
+      border: 1px solid #eee4da; background: #fff;
+    }
+    .record-top { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .pill { border-radius: 999px; padding: 6px 10px; background: #f4eee7; font-size: 12px; font-weight: 800; }
+    .income { color: #166534; }
+    .expense { color: #991b1b; }
+    .small { color: #70655c; font-size: 14px; }
+    .empty { text-align:center; color:#70655c; padding: 22px; }
+    @media (max-width: 780px) {
+      .cards, .grid, .voice-actions { grid-template-columns: 1fr; }
+      .voice-row { grid-template-columns: 1fr; text-align: center; }
+      .mic-circle { margin: 0 auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="brand">AnaGennisi Business Manager</div>
+    <h1>ΑναΓέννηση Finance</h1>
+    <p class="subtitle">Καταγραφή εσόδων και εξόδων με φόρμα ή φωνή. Η εφαρμογή αποθηκεύει τα δεδομένα τοπικά στη συσκευή σου.</p>
+
+    <section class="voice-panel">
+      <div class="voice-row">
+        <div id="micCircle" class="mic-circle">🎙️</div>
+        <div>
+          <p id="voiceStatus" class="status">Το μικρόφωνο είναι ανενεργό</p>
+          <p class="hint">Πες για παράδειγμα: «Έξοδο 25 ευρώ βενζίνη» ή «Έσοδο 120 ευρώ πελάτης Μαρία».</p>
+        </div>
+      </div>
+      <div class="voice-actions">
+        <button id="voiceBtn">Ξεκίνα φωνητική καταχώρηση</button>
+        <button id="stopBtn" class="secondary">Σταμάτημα</button>
+      </div>
+      <div id="transcript" class="transcript">Εδώ θα εμφανιστεί αυτό που άκουσα.</div>
+    </section>
+
+    <section class="cards">
+      <div class="card"><span>Σύνολο εσόδων</span><strong id="incomeTotal">€0.00</strong></div>
+      <div class="card"><span>Σύνολο εξόδων</span><strong id="expenseTotal">€0.00</strong></div>
+      <div class="card"><span>Καθαρό υπόλοιπο</span><strong id="balanceTotal">€0.00</strong></div>
+    </section>
+
+    <section class="form">
+      <div class="grid">
+        <input id="date" type="date" />
+        <select id="type"><option value="expense">Έξοδο</option><option value="income">Έσοδο</option></select>
+        <input id="company" placeholder="Εταιρεία / Όνομα" />
+        <input id="category" placeholder="Κατηγορία" />
+        <input id="amount" type="number" step="0.01" placeholder="Ποσό" />
+        <input id="note" placeholder="Σημείωση" />
+        <button id="addBtn" class="full">+ Προσθήκη καταχώρησης</button>
+      </div>
+    </section>
+
+    <section class="list-panel">
+      <div class="grid">
+        <input id="search" placeholder="Αναζήτηση..." />
+        <button id="exportBtn" class="secondary">Export CSV</button>
+      </div>
+      <div id="records" class="records"></div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "anagennisi_finance_voice_v2";
+    let recognition = null;
+    let isListening = false;
+
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      micCircle: $("micCircle"), voiceStatus: $("voiceStatus"), transcript: $("transcript"),
+      voiceBtn: $("voiceBtn"), stopBtn: $("stopBtn"),
+      date: $("date"), type: $("type"), company: $("company"), category: $("category"), amount: $("amount"), note: $("note"),
+      addBtn: $("addBtn"), search: $("search"), exportBtn: $("exportBtn"),
+      records: $("records"), incomeTotal: $("incomeTotal"), expenseTotal: $("expenseTotal"), balanceTotal: $("balanceTotal")
+    };
+
+    els.date.value = new Date().toISOString().slice(0, 10);
+
+    function money(n) { return "€" + Number(n || 0).toFixed(2); }
+    function getRecords() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
+    function saveRecords(records) { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
+    function escapeHtml(text) { return String(text).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
+
+    function setListening(active, message) {
+      isListening = active;
+      els.micCircle.classList.toggle("listening", active);
+      els.voiceBtn.classList.toggle("danger", active);
+      els.voiceStatus.textContent = message || (active ? "Ακούω τώρα..." : "Το μικρόφωνο είναι ανενεργό");
+      els.voiceBtn.textContent = active ? "Ακούω τώρα..." : "Ξεκίνα φωνητική καταχώρηση";
+    }
+
+    function parseVoice(text) {
+      const t = text.toLowerCase().replace(/,/g, ".");
+      const amountMatch = t.match(/(\d+(?:\.\d{1,2})?)/);
+      const amount = amountMatch ? Number(amountMatch[1]) : "";
+      const type = /(έσοδο|εισπραξη|είσπραξη|πήρα|πληρώθηκα|πώληση|πωληση|πούλησα)/i.test(t) ? "income" : "expense";
+
+      let clean = text;
+      clean = clean.replace(/\d+(?:[,.]\d{1,2})?/g, "");
+      clean = clean.replace(/ευρώ|ευρω|€/gi, "");
+      clean = clean.replace(/έξοδο|έσοδο|πλήρωσα|πληρωσα|έδωσα|εδωσα|αγόρασα|αγορασα|πήρα|πηρα|είσπραξη|εισπραξη|πώληση|πωληση|πούλησα/gi, "");
+      clean = clean.replace(/για|στην|στον|στο|στη|από|απο/gi, "");
+      clean = clean.trim();
+
+      const words = clean.split(/\s+/).filter(Boolean);
+      const category = words[0] || "";
+      const company = words.slice(1).join(" ") || category || "Χωρίς όνομα";
+
+      return { type, amount, category, company, note: text };
+    }
+
+    function fillFromVoice(text) {
+      const p = parseVoice(text);
+      els.type.value = p.type;
+      els.amount.value = p.amount;
+      els.category.value = p.category;
+      els.company.value = p.company;
+      els.note.value = p.note;
+      els.transcript.innerHTML = "Άκουσα: <strong>" + escapeHtml(text) + "</strong><br>Συμπλήρωσα τη φόρμα. Έλεγξε και πάτα Προσθήκη.";
+    }
+
+    function startVoice() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        els.transcript.innerHTML = "Το κινητό/browser δεν υποστηρίζει αναγνώριση φωνής από αρχείο. Δοκίμασε Chrome και, αν δεν λειτουργήσει, θα χρειαστεί web έκδοση με link.";
+        alert("Δεν υποστηρίζεται φωνητική αναγνώριση σε αυτό το άνοιγμα. Δοκίμασε Chrome.");
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = "el-GR";
+      recognition.interimResults = true;
+      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
+
+      setListening(true, "Ακούω τώρα... μίλησε καθαρά");
+      els.transcript.textContent = "Ακούω...";
+
+      recognition.onresult = (event) => {
+        let finalText = "";
+        let interimText = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const text = event.results[i][0].transcript;
+          if (event.results[i].isFinal) finalText += text;
+          else interimText += text;
+        }
+        if (interimText) els.transcript.textContent = "Ακούω: " + interimText;
+        if (finalText) fillFromVoice(finalText);
+      };
+
+      recognition.onerror = (e) => {
+        setListening(false, "Το μικρόφωνο σταμάτησε ή δεν δόθηκε άδεια");
+        els.transcript.textContent = "Σφάλμα μικροφώνου: " + (e.error || "άγνωστο");
+      };
+
+      recognition.onend = () => setListening(false, "Το μικρόφωνο είναι ανενεργό");
+
+      try { recognition.start(); } catch (e) { setListening(false, "Δεν μπόρεσε να ξεκινήσει το μικρόφωνο"); }
+    }
+
+    function stopVoice() {
+      if (recognition) recognition.stop();
+      setListening(false, "Το μικρόφωνο είναι ανενεργό");
+    }
+
+    function addRecord() {
+      const amount = Number(els.amount.value);
+      const company = els.company.value.trim();
+      if (!amount || !company) { alert("Συμπλήρωσε ποσό και εταιρεία/όνομα."); return; }
+
+      const records = getRecords();
+      records.unshift({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        date: els.date.value,
+        type: els.type.value,
+        company,
+        category: els.category.value.trim(),
+        amount,
+        note: els.note.value.trim(),
+        createdAt: new Date().toISOString()
+      });
+      saveRecords(records);
+      els.company.value = ""; els.category.value = ""; els.amount.value = ""; els.note.value = "";
+      render();
+    }
+
+    function deleteRecord(id) {
+      saveRecords(getRecords().filter(r => r.id !== id));
+      render();
+    }
+    window.deleteRecord = deleteRecord;
+
+    function render() {
+      const q = els.search.value.toLowerCase();
+      const records = getRecords().filter(r => `${r.company} ${r.category} ${r.note}`.toLowerCase().includes(q));
+      const income = records.filter(r => r.type === "income").reduce((s,r) => s + Number(r.amount), 0);
+      const expense = records.filter(r => r.type === "expense").reduce((s,r) => s + Number(r.amount), 0);
+      els.incomeTotal.textContent = money(income);
+      els.expenseTotal.textContent = money(expense);
+      els.balanceTotal.textContent = money(income - expense);
+
+      if (!records.length) {
+        els.records.innerHTML = '<div class="empty">Δεν υπάρχουν καταχωρήσεις ακόμα.</div>';
+        return;
+      }
+
+      els.records.innerHTML = records.map(r => `
+        <div class="record">
+          <div class="record-top">
+            <strong>${escapeHtml(r.company)}</strong>
+            <span class="pill ${r.type === "income" ? "income" : "expense"}">${r.type === "income" ? "Έσοδο" : "Έξοδο"} ${money(r.amount)}</span>
+          </div>
+          <div class="small">${escapeHtml(r.date)} · ${escapeHtml(r.category || "χωρίς κατηγορία")}</div>
+          <div class="small">${escapeHtml(r.note || "")}</div>
+          <button class="secondary" onclick="deleteRecord('${r.id}')">Διαγραφή</button>
+        </div>
+      `).join("");
+    }
+
+    function exportCsv() {
+      const records = getRecords();
+      const headers = ["date","type","company","category","amount","note"];
+      const rows = records.map(r => headers.map(h => `"${String(r[h] || "").replace(/"/g, '""')}"`).join(","));
+      const csv = [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "anagennisi-finance.csv"; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    els.voiceBtn.addEventListener("click", startVoice);
+    els.stopBtn.addEventListener("click", stopVoice);
+    els.addBtn.addEventListener("click", addRecord);
+    els.search.addEventListener("input", render);
+    els.exportBtn.addEventListener("click", exportCsv);
+    render();
+  </script>
+</body>
+</html>
